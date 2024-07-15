@@ -1,6 +1,3 @@
-/* original code(stereo-vo) Author: Filippos Sotiropoulos (filippos.sotiropoulos@gmail.com) */
-/* https://github.com/FilipposSot */
-
 #include "stereo_pr/stereo_pr.hpp"
 
 int main(int argc, char **argv)
@@ -11,8 +8,7 @@ int main(int argc, char **argv)
     int num_images = 0;
     CountImages(num_images, left_path);
     readGTPose("/home/cona/Downloads/dataset/data_odometry_gray/data_odometry_poses/dataset/poses/00.txt", gt_poses);
-    cv::viz::Viz3d myWindow("Coordinate Frame");
-    myWindow.setWindowSize(cv::Size(640,480));
+    
 
     Tracker tracker;
     Visualizer visualizer;
@@ -34,16 +30,10 @@ int main(int argc, char **argv)
         // tracker.extractKeypointsFAST(refer.left_cam); //FAST
         tracker.extractKeypointsORB(refer.left_cam); //ORB
         tracker.extractKeypointsORB(refer.right_cam); //ORB
-        // tracker.extractKeypointsORB(query.left_cam); //ORB, trackOnlyDescriptor
-        
         
         /*tracking*/
-        /*trackOnlyDescriptor: refer 좌우측, query 좌측에서 feature 추출*/
         /*trackKLTAndDescriptor: refer 좌우측에서 feature 추출*/
-        /*trackKeypointsCircular: refer 좌측에서 feature 추출*/
         tracker.trackKLTAndDescriptor(refer, query);
-        // tracker.trackOnlyDescriptor(refer, query);
-        // tracker.trackKeypointsCircular(refer, query);
         
         /*get 3d point*/
         tracker.calc3DPoints(refer);

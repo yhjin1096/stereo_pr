@@ -44,7 +44,7 @@ class Camera
         void loadImage(std::string path)
         {
             image = cv::imread(path);
-            cv::cvtColor(image, gray_image, CV_8UC1);
+            cv::cvtColor(image, gray_image, cv::COLOR_BGR2GRAY);
         }
 };
 
@@ -54,7 +54,7 @@ class Node
         Camera left_cam, right_cam;
         cv::Mat points3D;
         std::vector<double> landmarks;
-        double base_line = 0.119937;
+        double base_line = 0.5371657188644179;
         
         Node()
         {
@@ -68,6 +68,12 @@ class Node
                                                                  0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00, 0.000000000000e+00);
             right_cam.intrinsic_Mat = left_cam.projection_Mat(cv::Rect(0,0,3,3)).clone();
 
+// cv::Mat tmp1 = left_cam.projection_Mat.clone();
+// cv::Mat tmp2 = right_cam.projection_Mat.clone();
+// cv::Mat addup = (cv::Mat_<double>(1, 4) << 0, 0, 0, 1);
+// cv::vconcat(tmp1, addup, tmp1);
+// cv::vconcat(tmp2, addup, tmp2);
+// std::cout << tmp2.inv() * tmp1 << std::endl;
 
             right_cam.cam_to_world_pose.at<double>(0,3) = base_line;
             right_cam.world_to_cam_pose = right_cam.cam_to_world_pose.inv();
@@ -112,7 +118,7 @@ class Tracker
         void extractKeypointsORB(Camera& cam)
         {
             // ORB 특징 검출기 생성
-            cv::Ptr<cv::Feature2D> orb = cv::ORB::create(3000);
+            cv::Ptr<cv::Feature2D> orb = cv::ORB::create(1500);
 
             // 특징 검출
             orb->detectAndCompute(cam.gray_image, cv::noArray(), cam.keypts, cam.descriptors);
@@ -122,34 +128,7 @@ class Tracker
             cv::Ptr<cv::DescriptorExtractor> descriptor = cv::ORB::create();
             descriptor->compute(cam.image, cam.keypts, cam.descriptors);
         }
-        
-        void trackKeypointsCircular(Node& refer, Node& query)
-        {
-            matchAndTrack(refer.left_cam.gray_image, refer.right_cam.gray_image,
-                          query.left_cam.gray_image, query.right_cam.gray_image,
-                          refer.left_cam.keypoints, refer.right_cam.keypoints,
-                          query.left_cam.keypoints, query.right_cam.keypoints);
-            std::cout << "after circular matching:" << refer.left_cam.keypoints.size() << std::endl;
-            // for(int i = 0; i < refer.left_cam.keypoints.size(); i++)
-            // {
-            //     cv::Mat refer_left_image = refer.left_cam.image.clone(), refer_right_image = refer.right_cam.image.clone();
-            //     cv::Mat query_left_image = query.left_cam.image.clone(), query_right_image = query.right_cam.image.clone();
-
-            //     cv::circle(refer_left_image, refer.left_cam.keypoints[i], 5, cv::Scalar(0,0,255), 5);
-            //     cv::circle(refer_right_image, refer.right_cam.keypoints[i], 5, cv::Scalar(0,0,255), 5);
-            //     cv::circle(query_left_image, query.left_cam.keypoints[i], 5, cv::Scalar(0,0,255), 5);
-            //     cv::circle(query_right_image, query.right_cam.keypoints[i], 5, cv::Scalar(0,0,255), 5);
-            //     cv::Mat refer_, query_, total;
-            //     cv::hconcat(refer_left_image, refer_right_image, refer_);
-            //     cv::hconcat(query_left_image, query_right_image, query_);
-            //     cv::vconcat(query_, refer_, total);
-            //     cv::imshow("total", total);
-            //     char k = cv::waitKey(0);
-            //     if(k==27)
-            //         exit(0);
-            // }
-        }
-        
+                
         void trackKLTAndDescriptor(Node& refer, Node& query)
         {
             // refer right cam - keypoint -> descriptor matching 후 필요 없는 것들 erase
@@ -216,59 +195,6 @@ class Tracker
             // std::cout << matches.size() << std::endl;
             cv::imshow("matches", output_img);
             // cv::waitKey(0);
-        }
-        void trackOnlyDescriptor(Node& refer, Node& query)
-        {
-            cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
-            std::vector<cv::DMatch> lr_match, good_lr_match, ll_match;
-            std::vector<cv::DMatch> total_lr, total_ll;
-            matcher->match(refer.left_cam.descriptors, refer.right_cam.descriptors, lr_match);
-            matcher->match(refer.left_cam.descriptors, query.left_cam.descriptors, ll_match);
-            
-            double min_dist = 10000, max_dist = 0;
-            for (int i = 0; i < refer.left_cam.descriptors.rows; i++) {
-                double dist = lr_match[i].distance;
-                if (dist < min_dist) min_dist = dist;
-                if (dist > max_dist) max_dist = dist;
-            }
-            for (int i = 0; i < refer.left_cam.descriptors.rows; i++) {
-                if (lr_match[i].distance <= std::max(2 * min_dist, 20.0)) {
-                    good_lr_match.push_back(lr_match[i]);
-                }
-            }
-
-            std::vector<cv::KeyPoint> refer_left, refer_right, query_left;
-            for(int i = 0; i < good_lr_match.size(); i++)
-            {
-                int lr_q_idx = good_lr_match[i].queryIdx; //left
-                int lr_t_idx = good_lr_match[i].trainIdx; //right
-                for(int j = 0; j < ll_match.size(); j++)
-                {
-                    int ll_q_idx = ll_match[j].queryIdx; // refer
-                    int ll_t_idx = ll_match[j].trainIdx; // query
-                    if(lr_q_idx == ll_q_idx && ll_match[j].distance < 20)
-                    {
-                        refer_left.push_back(refer.left_cam.keypts[ll_q_idx]);
-                        refer_right.push_back(refer.right_cam.keypts[lr_t_idx]);
-                        query_left.push_back(query.left_cam.keypts[ll_t_idx]);
-
-                        total_lr.push_back(good_lr_match[i]);
-                        total_ll.push_back(ll_match[j]);
-                        break;
-                    }
-                }
-            }
-            // cv::Mat lr_img, ll_img;
-            // cv::drawMatches(refer.left_cam.image, refer.left_cam.keypts, refer.right_cam.image, refer.right_cam.keypts,
-            //                 total_lr, lr_img);
-            // cv::drawMatches(refer.left_cam.image, refer.left_cam.keypts, query.left_cam.image, query.left_cam.keypts,
-            //                 total_ll, ll_img);
-            // cv::imshow("lr_img", lr_img);
-            // cv::imshow("ll_img", ll_img);
-            // cv::waitKey(0);
-            cv::KeyPoint::convert(refer_left, refer.left_cam.keypoints, std::vector<int>());
-            cv::KeyPoint::convert(refer_right, refer.right_cam.keypoints, std::vector<int>());
-            cv::KeyPoint::convert(query_left, query.left_cam.keypoints, std::vector<int>());
         }
 
         void calc3DPoints(Node& node)
@@ -361,137 +287,6 @@ class Tracker
             std::cout << "threshold of fast detector: " << fast_threshold << std::endl;
             std::cout << "before circular matching: " << keypts.size() << std::endl;
         }
-        void deleteUntrackedFeatures(   std::vector<cv::Point2f>& points0, std::vector<cv::Point2f>& points1,
-                                std::vector<cv::Point2f>& points2, std::vector<cv::Point2f>& points3,
-                                std::vector<cv::Point2f>& points0_return,
-                                std::vector<uchar>& status0, std::vector<uchar>& status1,
-                                std::vector<uchar>& status2, std::vector<uchar>& status3)
-        {
-            int j = 0;
-            for( int i=0; i<status3.size(); i++)
-            {  
-                cv::Point2f p0 = points0.at(i - j);
-                cv::Point2f p1 = points1.at(i - j);
-                cv::Point2f p2 = points2.at(i - j);
-                cv::Point2f p3 = points3.at(i - j);
-                cv::Point2f p0_r = points0_return.at(i- j);
-                
-                if ((status0.at(i) == 0) ||(status1.at(i) == 0)||
-                    (status3.at(i) == 0) ||(status2.at(i) == 0)||
-                    (p0.x<0) || (p0.y<0) || (p1.x<0) || (p1.y<0) ||
-                    (p2.x<0) || (p2.y<0) || (p3.x<0) || (p3.y<0))        
-                {
-
-                    points0.erase (points0.begin() + (i - j));
-                    points1.erase (points1.begin() + (i - j));
-                    points2.erase (points2.begin() + (i - j));
-                    points3.erase (points3.begin() + (i - j));
-                    points0_return.erase (points0_return.begin() + (i - j));
-
-                    j++;
-                }
-
-            }  
-        }
-        void circularMatching(cv::Mat img_l_0, cv::Mat img_r_0, cv::Mat img_l_1, cv::Mat img_r_1,
-                      std::vector<cv::Point2f>& points_l_0, std::vector<cv::Point2f>& points_r_0,
-                      std::vector<cv::Point2f>& points_l_1, std::vector<cv::Point2f>& points_r_1,
-                      std::vector<cv::Point2f>& points_l_0_return) 
-        { 
-        
-            /*Track the features using LK optical flow sequentially through left and right images and in prev and curr timestep.
-            Then the deleteUntrackedFeatures function removes all the points which didnt track in any of the steps
-            */
-
-            std::vector<float> err;                    
-            cv::Size winSize=cv::Size(21,21);                                                                                             
-            cv::TermCriteria termcrit=cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01);
-
-            std::vector<uchar> status0;
-            std::vector<uchar> status1;
-            std::vector<uchar> status2;
-            std::vector<uchar> status3;
-
-            calcOpticalFlowPyrLK(img_l_0, img_r_0, points_l_0, points_r_0, status0, err, winSize, 3, termcrit, 0, 0.001);
-            calcOpticalFlowPyrLK(img_r_0, img_r_1, points_r_0, points_r_1, status1, err, winSize, 3, termcrit, 0, 0.001);
-            calcOpticalFlowPyrLK(img_r_1, img_l_1, points_r_1, points_l_1, status2, err, winSize, 3, termcrit, 0, 0.001);
-            calcOpticalFlowPyrLK(img_l_1, img_l_0, points_l_1, points_l_0_return, status3, err, winSize, 3, termcrit, 0, 0.001);
-
-            deleteUntrackedFeatures(points_l_0, points_r_0,
-                                    points_r_1, points_l_1,
-                                    points_l_0_return,
-                                    status0, status1,
-                                    status2, status3);
-            // std::cout << "points : " << points_l_0.size() << " "<< points_r_0.size() << " "<< points_r_1.size() << " "<< points_l_1.size() << " "<<std::endl;
-        }
-        void checkValidMatch(std::vector<cv::Point2f>& points, std::vector<cv::Point2f>& points_return, std::vector<bool>& status, int threshold)
-        { /* Check if a tracked point is usable: if two points have a mismatch larger than a threshold they are deemed invalid
-            */
-            int offset;
-            for (int i = 0; i < points.size(); i++)
-            {
-                offset = std::max(std::abs(points[i].x - points_return[i].x), std::abs(points[i].y - points_return[i].y));
-
-                if(offset > threshold)
-                {
-                    status.push_back(false);
-                }
-                else
-                {
-                    status.push_back(true);
-                }
-            }
-        }
-
-        void removeInvalidPoints(std::vector<cv::Point2f>& points, const std::vector<bool>& status)
-        {
-            int index = 0;
-            for (int i = 0; i < status.size(); i++)
-            {
-                if (status[i] == false)
-                {
-                    points.erase(points.begin() + index);
-                }
-                else
-                {
-                    index ++;
-                }
-            }
-        }
-
-        void matchAndTrack(cv::Mat& image_l_0, cv::Mat& image_r_0,
-                        cv::Mat& image_l_1, cv::Mat& image_r_1, 
-                        std::vector<cv::Point2f>&  points_l_0, 
-                        std::vector<cv::Point2f>&  points_r_0, 
-                        std::vector<cv::Point2f>&  points_l_1, 
-                        std::vector<cv::Point2f>&  points_r_1
-                        )
-        {
-
-            std::vector<cv::Point2f>  points_l_0_return; 
-
-            circularMatching(image_l_0, image_r_0,
-                            image_l_1, image_r_1,
-                            points_l_0,
-                            points_r_0, 
-                            points_l_1, 
-                            points_r_1,
-                            points_l_0_return);
-            
-            std::vector<bool> status;
-            
-            checkValidMatch(points_l_0, points_l_0_return, status, 0);
-
-            removeInvalidPoints(points_l_0, status);
-            removeInvalidPoints(points_l_1, status);
-            removeInvalidPoints(points_r_0, status);
-            removeInvalidPoints(points_r_1, status);
-
-            // visualizeTracking(image_tracking, image_l_1, points_l_0, points_l_1);
-        }
-
-        
-
 
         cv::Vec3f rotationMatrixToEulerAngles(cv::Mat &R)
         {
@@ -720,6 +515,7 @@ inline void readGTPose(const std::string& path, std::vector<cv::Mat>& gt_poses)
         exit(0);
     }
 }
+
 inline double calculateRotationError(const cv::Mat& R_gt, const cv::Mat& R_est) {
     // Calculate the difference rotation matrix
     cv::Mat R_diff = R_gt.t() * R_est;
