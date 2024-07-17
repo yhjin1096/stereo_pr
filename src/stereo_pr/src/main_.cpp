@@ -15,7 +15,11 @@ int main(int argc, char **argv)
 
     FeatureTracker ft;
     PlaceRecognition pr;
+    Visualizer viz;
     Mode mode = Mode::query;
+
+    std::vector<Node> nodes;
+    cv::Mat traj = cv::Mat::zeros(cv::Size(1000,1000), CV_8UC3);
 
     for(int i = 0; i < num_images; i++)
     {
@@ -27,22 +31,48 @@ int main(int argc, char **argv)
         node.left_cam.changeStructure();
         node.right_cam.changeStructure();
 
-        // cv::Mat draw_image = node.left_cam.image.clone();
-        // cv::drawKeypoints(node.left_cam.image, node.left_cam.keypts, draw_image);
-        // cv::imshow("draw_image", draw_image);
-        // char k = cv::waitKey(1);
-        // if(k == 'q')
-        //     break;
-        
-        if(mode == Mode::save)
-            pr.stackFeatures(node.left_cam.row_descriptor);
-        else if(mode == Mode::query)
+        if(i != 0)
         {
-            if(i == 0)
-                pr.loadDatabase("ORBdb.yml.gz");
-            
-            pr.queryDatabase(node.index, node.left_cam.row_descriptor);
+            // get stereo matching
+            nodes[i-1].stereo_matches = ft.getDescMatching(nodes[i-1].left_cam.descriptors, nodes[i-1].right_cam.descriptors);
+            viz.vizMatches(nodes[i-1], true);
+            nodes[i-1].removeMatchingOutlier();
+
+            // tracking
+            Node tmp_node = ft.trackImage(nodes[i-1], node);
+            viz.vizTracking(nodes[i-1], tmp_node, true);
+
+            // get 3d point
+            nodes[i-1].points3D = ft.calc3DPoints(nodes[i-1].left_cam, nodes[i-1].right_cam);
+
+            // pose estimation
+            // nodes[i-1], tmp_node
+            // node의 pose를 tmp_node의 pose로 
+            ft.calcPose(nodes[i-1], tmp_node);
+            node.cam_to_world_pose = tmp_node.cam_to_world_pose.clone();
+            node.world_to_cam_pose = tmp_node.world_to_cam_pose.clone();
+            node.rot_rodrigues = tmp_node.rot_rodrigues.clone();
+            node.translation = tmp_node.translation.clone();
+            viz.vizTrajectory(node.cam_to_world_pose, traj);
+
+            // if(mode == Mode::save)
+            //     pr.stackFeatures(node.left_cam.row_descriptor);
+            // else if(mode == Mode::query)
+            // {
+            //     if(i == 0)
+            //         pr.loadDatabase("ORBdb.yml.gz");
+            //     else
+            //     {
+            //         // vo // node[i]
+            //         int pr_node_idx = pr.queryDatabase(node.index, node.left_cam.row_descriptor);
+            //     }
+            // }
         }
+
+        nodes.push_back(node);
+        char key = cv::waitKey(1);
+        if(key == 27)
+            break;
     }
     
     Timer timer;

@@ -92,11 +92,20 @@ class PlaceRecognition
             db.load(path);
         }
 
-        void queryDatabase(const int& node_idx, const std::vector<cv::Mat>& feature)
+        int queryDatabase(const int& node_idx, const std::vector<cv::Mat>& feature)
         {
             DBoW2::QueryResults res;
-            db.query(feature, res, 3);
+            db.query(feature, res, 5);
             std::cout << "Image: " << node_idx << ", " << res << std::endl;
+            
+            for(int i = 0; i < res.size(); i++)
+            {
+                int res_idx = static_cast<int>(res[i].Id);
+                if(node_idx - res_idx >= 20) // node_idx가 크고, 가장 가까운 노드가 20 노드 이상 차이날 때
+                    return res_idx;
+            }
+
+            return -1;
         }
 };
 
