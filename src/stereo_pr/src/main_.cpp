@@ -20,6 +20,7 @@ int main(int argc, char **argv)
 
     std::vector<Node> nodes;
     cv::Mat traj = cv::Mat::zeros(cv::Size(1000,1000), CV_8UC3);
+    int wait_sec = 1;
 
     for(int i = 0; i < num_images; i++)
     {
@@ -46,31 +47,40 @@ int main(int argc, char **argv)
             nodes[i-1].points3D = ft.calc3DPoints(nodes[i-1].left_cam, nodes[i-1].right_cam);
 
             // pose estimation
-            // nodes[i-1], tmp_node
-            // node의 pose를 tmp_node의 pose로 
             ft.calcPose(nodes[i-1], tmp_node);
             node.cam_to_world_pose = tmp_node.cam_to_world_pose.clone();
             node.world_to_cam_pose = tmp_node.world_to_cam_pose.clone();
             node.rot_rodrigues = tmp_node.rot_rodrigues.clone();
             node.translation = tmp_node.translation.clone();
             viz.vizTrajectory(node.cam_to_world_pose, traj);
+        }
 
-            // if(mode == Mode::save)
-            //     pr.stackFeatures(node.left_cam.row_descriptor);
-            // else if(mode == Mode::query)
-            // {
-            //     if(i == 0)
-            //         pr.loadDatabase("ORBdb.yml.gz");
-            //     else
-            //     {
-            //         // vo // node[i]
-            //         int pr_node_idx = pr.queryDatabase(node.index, node.left_cam.row_descriptor);
-            //     }
-            // }
+        // place recognition
+        cv::Mat pr_traj = traj.clone();
+        if(mode == Mode::save)
+            pr.stackFeatures(node.left_cam.row_descriptor);
+        else if(mode == Mode::query)
+        {
+            if(i == 0)
+            {
+                pr.loadDatabase("ORBdb.yml.gz");
+            }
+            else
+            {
+                // vo // node[i]
+                std::vector<DBoW2::Result> pr_list = pr.queryDatabase(node.index, node.left_cam.row_descriptor, 10);
+                if(pr_list.size())
+                {
+                    viz.vizPRTrajectory(nodes, node, pr_list, pr_traj);
+                    wait_sec = 0;
+                }
+                else
+                    wait_sec = 1;
+            }
         }
 
         nodes.push_back(node);
-        char key = cv::waitKey(1);
+        char key = cv::waitKey(wait_sec);
         if(key == 27)
             break;
     }

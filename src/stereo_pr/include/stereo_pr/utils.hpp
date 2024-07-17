@@ -95,5 +95,13 @@ class utils
             
             return parameters;
         }
+
+        static cv::Point2i getPixelPosition(const cv::Mat& pose, cv::Mat& traj)
+        {
+            cv::Point2i point;
+            point.x = traj.size().width/2 + pose.at<double>(0,3);
+            point.y = traj.size().height/2 + pose.at<double>(2,3);
+            return point;
+        }
 };
 #endif
