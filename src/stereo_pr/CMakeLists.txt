@@ -28,7 +28,7 @@ include_directories(
 )
 
 # add_executable(${PROJECT_NAME}_node src/main.cpp)
-add_executable(${PROJECT_NAME}_node src/main_.cpp
+add_executable(${PROJECT_NAME}_node src/main.cpp
                                     src/DBoW2/BowVector.cpp
                                     src/DBoW2/FBrief.cpp
                                     src/DBoW2/FeatureVector.cpp
