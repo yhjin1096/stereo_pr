@@ -1,4 +1,4 @@
-#include "stereo_pr/stereo_pr.hpp"
+#include "stereo_pr/stereo_pr_dbow3.hpp"
 
 enum Mode
 {
@@ -14,13 +14,14 @@ int main(int argc, char **argv)
     std::cout << "num_images: " << num_images << std::endl;
 
     FeatureTracker ft;
-    PlaceRecognition pr;
+    PR_DBoW3 pr;
     Visualizer viz;
     Mode mode = Mode::query;
 
     std::vector<Node> nodes;
     cv::Mat traj = cv::Mat::zeros(cv::Size(1000,1000), CV_8UC3);
     int wait_sec = 1;
+    Timer timer;
 
     for(int i = 0; i < num_images; i++)
     {
@@ -29,10 +30,7 @@ int main(int argc, char **argv)
         ft.featureExtract(node.left_cam);
         ft.featureExtract(node.right_cam);
 
-        node.left_cam.changeStructure();
-        node.right_cam.changeStructure();
-
-        if(i != 0)
+        if(i != 0 && mode != Mode::save)
         {
             // get stereo matching
             nodes[i-1].stereo_matches = ft.getDescMatching(nodes[i-1].left_cam.descriptors, nodes[i-1].right_cam.descriptors);
@@ -55,20 +53,21 @@ int main(int argc, char **argv)
             viz.vizTrajectory(node.cam_to_world_pose, traj);
         }
 
-        // place recognition
         cv::Mat pr_traj = traj.clone();
         if(mode == Mode::save)
-            pr.stackFeatures(node.left_cam.row_descriptor);
-        else if(mode == Mode::query)
+            pr.stackFeatures(node.left_cam.descriptors);
+        else
         {
             if(i == 0)
             {
-                pr.loadDatabase("ORBdb.yml.gz");
+                timer.tic();
+                pr.loadDatabase("dbow3_db/ORBdb.yml.gz");
+                timer.toc();
             }
             else
             {
                 // vo // node[i]
-                std::vector<DBoW2::Result> pr_list = pr.queryDatabase(node.index, node.left_cam.row_descriptor, 10);
+                std::vector<int> pr_list = pr.queryDatabase(node.index, node.left_cam.descriptors, 10);
                 if(pr_list.size())
                 {
                     viz.vizPRTrajectory(nodes, node, pr_list, pr_traj);
@@ -84,15 +83,12 @@ int main(int argc, char **argv)
         if(key == 27)
             break;
     }
-    
-    Timer timer;
-    timer.tic();
+
     if(mode == Mode::save) // database 생성
     {
         // pr.VocCreation();
         pr.createDatabase("ORBvoc.txt");
     }
-    timer.toc();
-    
+
     return 0;
 }

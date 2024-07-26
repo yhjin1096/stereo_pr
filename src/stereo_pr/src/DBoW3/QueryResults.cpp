@@ -9,11 +9,11 @@
 
 #include <iostream>
 #include <fstream>
-#include "DBoW2/QueryResults.h"
+#include "DBoW3/QueryResults.h"
 
 using namespace std;
 
-namespace DBoW2
+namespace DBoW3
 {
 
 // ---------------------------------------------------------------------------
@@ -59,5 +59,5 @@ void QueryResults::saveM(const std::string &filename) const
 
 // ---------------------------------------------------------------------------
 
-} // namespace DBoW2
+} // namespace DBoW3
 

@@ -1,19 +1,19 @@
-#ifndef PLACE_RECOGNITION_H
-#define PLACE_RECOGNITION_H
+#ifndef PR_DBOW2_H
+#define PR_DBOW2_H
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
 
-#include "DBoW2.h"
+#include "DBoW2/DBoW2.h"
 
-class PlaceRecognition
+class PR_DBoW2
 {
     private:
     public:
-        PlaceRecognition(){};
-        ~PlaceRecognition(){};
+        PR_DBoW2(){};
+        ~PR_DBoW2(){};
 
         OrbDatabase db;
 
@@ -82,7 +82,7 @@ class PlaceRecognition
             }
 
             std::cout << "Saving database..." << std::endl;
-            db.save("ORBdb.yml.gz");
+            db.save("dbow2_db/ORBdb.yml.gz");
             std::cout << "... done!" << std::endl;
         }
 
@@ -92,19 +92,19 @@ class PlaceRecognition
             db.load(path);
         }
 
-        std::vector<DBoW2::Result> queryDatabase(const int& node_idx, const std::vector<cv::Mat>& feature, int num)
+        std::vector<int> queryDatabase(const int& node_idx, const std::vector<cv::Mat>& feature, int num)
         {
             DBoW2::QueryResults res;
             db.query(feature, res, num);
             // std::cout << "Image: " << node_idx << ", " << res << std::endl;
             
-            std::vector<DBoW2::Result> id_list;
+            std::vector<int> id_list;
 
             for(int i = 0; i < res.size(); i++)
             {
                 int res_idx = static_cast<int>(res[i].Id);
                 if(node_idx - res_idx >= 20 && res[i].Score >= 0.05) // 현재 노드(node_idx)보다 이전 노드이고 20노드 이상 차이날 때
-                    id_list.push_back(res[i]);
+                    id_list.push_back(res_idx);
                     // return res_idx;
             }
 

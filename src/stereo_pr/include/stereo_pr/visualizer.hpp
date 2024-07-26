@@ -52,12 +52,12 @@ class Visualizer
             cv::imshow("traj", traj);
         }
 
-        void vizPRTrajectory(const std::vector<Node>& nodes, const Node& curr_node, const std::vector<DBoW2::Result>& pr_list, cv::Mat& image)
+        void vizPRTrajectory(const std::vector<Node>& nodes, const Node& curr_node, const std::vector<int>& pr_list, cv::Mat& image)
         {
             cv::circle(image, utils::getPixelPosition(curr_node.cam_to_world_pose, image), 4, CV_RGB(255, 0, 0));
             for(int i = 0; i < pr_list.size(); i++)
             {
-                int pr_id = pr_list[i].Id;
+                int pr_id = pr_list[i];
                 cv::Mat nodes_pose = nodes[pr_id].cam_to_world_pose;
                 cv::Mat curr_node_pose = curr_node.cam_to_world_pose;
                 // std::cout << curr_node.index << "," << pr_id << ": " << pr_list[i].Score << std::endl;

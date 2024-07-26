@@ -7,12 +7,12 @@
  *
  */
 
-#include "DBoW2/FeatureVector.h"
+#include "DBoW3/FeatureVector.h"
 #include <map>
 #include <vector>
 #include <iostream>
 
-namespace DBoW2 {
+namespace DBoW3 {
 
 // ---------------------------------------------------------------------------
 
@@ -82,4 +82,4 @@ std::ostream& operator<<(std::ostream &out,
 
 // ---------------------------------------------------------------------------
 
-} // namespace DBoW2
+} // namespace DBoW3

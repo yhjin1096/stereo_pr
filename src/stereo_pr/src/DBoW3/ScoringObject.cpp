@@ -8,10 +8,10 @@
  */
 
 #include <cfloat>
-#include "DBoW2/TemplatedVocabulary.h"
-#include "DBoW2/BowVector.h"
+#include "DBoW3/Vocabulary.h"
+#include "DBoW3/BowVector.h"
 
-using namespace DBoW2;
+using namespace DBoW3;
 
 // If you change the type of WordValue, make sure you change also the
 // epsilon value (this is needed by the KL method)

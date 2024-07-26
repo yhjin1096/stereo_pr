@@ -21,23 +21,38 @@ catkin_package(
 
 include_directories(
   include
-  include/DBoW2
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${DBoW2_INCLUDE_DIRS}
 )
 
 # add_executable(${PROJECT_NAME}_node src/main.cpp)
-add_executable(${PROJECT_NAME}_node src/main.cpp
-                                    src/DBoW2/BowVector.cpp
-                                    src/DBoW2/FBrief.cpp
-                                    src/DBoW2/FeatureVector.cpp
-                                    src/DBoW2/FORB.cpp
-                                    src/DBoW2/FSurf64.cpp
-                                    src/DBoW2/QueryResults.cpp
-                                    src/DBoW2/ScoringObject.cpp)
+add_executable(${PROJECT_NAME}_dbow2 src/main_dbow2.cpp
+                                     src/DBoW2/BowVector.cpp
+                                     src/DBoW2/FBrief.cpp
+                                     src/DBoW2/FeatureVector.cpp
+                                     src/DBoW2/FORB.cpp
+                                     src/DBoW2/FSurf64.cpp
+                                     src/DBoW2/QueryResults.cpp
+                                     src/DBoW2/ScoringObject.cpp)
 
-target_link_libraries(${PROJECT_NAME}_node
+add_executable(${PROJECT_NAME}_dbow3 src/main_dbow3.cpp
+                                     src/DBoW3/BowVector.cpp
+                                     src/DBoW3/Database.cpp
+                                     src/DBoW3/DescManip.cpp
+                                     src/DBoW3/FeatureVector.cpp
+                                     src/DBoW3/QueryResults.cpp
+                                     src/DBoW3/quicklz.c
+                                     src/DBoW3/ScoringObject.cpp
+                                     src/DBoW3/Vocabulary.cpp)
+
+target_link_libraries(${PROJECT_NAME}_dbow2
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${DBoW2_LIBRARIES}
+)
+
+target_link_libraries(${PROJECT_NAME}_dbow3
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${DBoW2_LIBRARIES}

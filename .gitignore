@@ -2,5 +2,10 @@ build/
 devel/
 .vscode/
 .catkin_workspace
+
 ORBvoc.txt
 ORBdb.yml.gz
+ORBvoc.yml.gz
+dbow2_db/
+dbow3_db/
+fbow_db/
